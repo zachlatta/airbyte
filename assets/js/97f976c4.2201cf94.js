@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkdocu=self.webpackChunkdocu||[]).push([[6100],{89432:t=>{t.exports=JSON.parse('{"title":"Destinations","slug":"/category/destinations","permalink":"/category/destinations","navigation":{"previous":{"title":"Zuora","permalink":"/integrations/sources/zuora"},"next":{"title":"Amazon SQS","permalink":"/integrations/destinations/amazon-sqs"}}}')}}]);
