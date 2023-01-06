@@ -104,7 +104,7 @@ const VersionCell: React.FC<VersionCellProps> = ({ id, version, onChange, feedba
                     id: "admin.latestNote",
                   })}
                 >
-                  <VersionInput {...field} type="text" autoComplete="off" />
+                  <VersionInput {...field} type="text" autoComplete="off" data-testid="version-input" />
                 </InputField>
               )}
             </Field>

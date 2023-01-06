@@ -41,7 +41,7 @@ const CustomAnnotation = styled.span`
 
 const ConnectorCell: React.FC<ConnectorCellProps> = ({ connectorName, img, hasUpdate, releaseStage }) => {
   return (
-    <Content>
+    <Content data-testid="connectorNameCell">
       {hasUpdate && <Notification />}
       <Image>{getIcon(img)}</Image>
       <span>{connectorName}</span>
