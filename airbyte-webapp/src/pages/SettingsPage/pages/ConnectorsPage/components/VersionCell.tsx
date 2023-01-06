@@ -7,6 +7,7 @@ import { Button } from "components/ui/Button";
 import { Input } from "components/ui/Input";
 
 import { DEV_IMAGE_TAG } from "core/domain/connector/constants";
+import { ConnectorIds } from "utils/connectors";
 
 import { FormContent } from "./PageComponents";
 
@@ -84,6 +85,10 @@ const VersionCell: React.FC<VersionCellProps> = ({ id, version, onChange, feedba
   };
 
   const isConnectorUpdatable = currentVersion !== version || currentVersion === DEV_IMAGE_TAG;
+
+  if (id === ConnectorIds.Sources.Postgres) {
+    console.log(version);
+  }
 
   return (
     <FormContent>
