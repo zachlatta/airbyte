@@ -72,12 +72,12 @@ const VersionCell: React.FC<VersionCellProps> = ({ id, version, onChange, feedba
     if (feedback && !dirty) {
       if (feedback === "success") {
         return (
-          <SuccessMessage>
+          <SuccessMessage data-testid="successMessage">
             <FormattedMessage id="form.savedChange" />
           </SuccessMessage>
         );
       }
-      return <ErrorMessage>{feedback}</ErrorMessage>;
+      return <ErrorMessage data-testid="errorMessage">{feedback}</ErrorMessage>;
     }
 
     return null;
@@ -113,6 +113,7 @@ const VersionCell: React.FC<VersionCellProps> = ({ id, version, onChange, feedba
               isLoading={isSubmitting || updating}
               type="submit"
               disabled={(isSubmitting || !dirty) && !isConnectorUpdatable}
+              data-testid="versionButton"
             >
               <FormattedMessage id="form.change" />
             </Button>
