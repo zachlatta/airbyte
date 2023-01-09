@@ -31,3 +31,13 @@ export const appendRandomString = (string: string) => {
   const randomString = Math.random().toString(36).substring(2, 10);
   return `${string} _${randomString}`;
 };
+
+// we are not currently able to access the const files for these directly from the webapp
+// longterm, we should be pulling these directly from there!
+
+export const connectorsIds = {
+  sources: { AwsCloudTrail: "6ff047c0-f5d5-4ce5-8c81-204a830fa7e1" },
+  destinations: {
+    AwsDatalake: "99878c90-0fbd-46d3-9d98-ffde879d17fc",
+  },
+};

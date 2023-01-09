@@ -7,7 +7,6 @@ import { Button } from "components/ui/Button";
 import { Input } from "components/ui/Input";
 
 import { DEV_IMAGE_TAG } from "core/domain/connector/constants";
-import { ConnectorIds } from "utils/connectors";
 
 import { FormContent } from "./PageComponents";
 
@@ -86,10 +85,6 @@ const VersionCell: React.FC<VersionCellProps> = ({ id, version, onChange, feedba
 
   const isConnectorUpdatable = currentVersion !== version || currentVersion === DEV_IMAGE_TAG;
 
-  if (id === ConnectorIds.Sources.Postgres) {
-    console.log(version);
-  }
-
   return (
     <FormContent>
       <Formik
@@ -109,7 +104,7 @@ const VersionCell: React.FC<VersionCellProps> = ({ id, version, onChange, feedba
                     id: "admin.latestNote",
                   })}
                 >
-                  <VersionInput {...field} type="text" autoComplete="off" data-testid="version-input" />
+                  <VersionInput {...field} type="text" autoComplete="off" data-testid={`${id}-versionInput`} />
                 </InputField>
               )}
             </Field>
@@ -118,7 +113,7 @@ const VersionCell: React.FC<VersionCellProps> = ({ id, version, onChange, feedba
               isLoading={isSubmitting || updating}
               type="submit"
               disabled={(isSubmitting || !dirty) && !isConnectorUpdatable}
-              data-testid="versionButton"
+              data-testid={`${id}-versionButton`}
             >
               <FormattedMessage id="form.change" />
             </Button>
