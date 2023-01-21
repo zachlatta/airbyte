@@ -259,7 +259,7 @@ public class SchedulerHandler {
   }
 
   public SourceDiscoverSchemaRead discoverSchemaForSourceFromSourceId(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody)
-      throws ConfigNotFoundException, IOException, JsonValidationException, InterruptedException, ApiException {
+      throws ConfigNotFoundException, IOException, JsonValidationException {
     final SourceConnection source = configRepository.getSourceConnection(discoverSchemaRequestBody.getSourceId());
     final StandardSourceDefinition sourceDef = configRepository.getStandardSourceDefinition(source.getSourceDefinitionId());
     final String imageName = DockerUtils.getTaggedImageName(sourceDef.getDockerRepository(), sourceDef.getDockerImageTag());
@@ -407,7 +407,7 @@ public class SchedulerHandler {
   // containsBreakingChange parameter, and connectionStatus parameter.
   private void generateCatalogDiffsAndDisableConnectionsIfNeeded(final SourceDiscoverSchemaRead discoveredSchema,
                                                                  final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException, InterruptedException {
+      throws JsonValidationException, ConfigNotFoundException, IOException {
     final ConnectionNotificationWorkflow notificationWorkflow =
         workflowClient.newWorkflowStub(ConnectionNotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY));
     final ConnectionReadList connectionsForSource = connectionsHandler.listConnectionsForSource(discoverSchemaRequestBody.getSourceId(), false);
@@ -433,7 +433,7 @@ public class SchedulerHandler {
       if (!diff.getTransforms().isEmpty()) {
         try {
           notificationWorkflow.sendSchemaChangeNotification(connectionRead.getConnectionId());
-        } catch (ApiException e) {
+        } catch (ApiException | InterruptedException e) {
           log.error("There was an error while sending a Schema Change Notification", e);
         }
       }
