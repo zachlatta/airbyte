@@ -47,7 +47,7 @@ export const SideBar: React.FC<SideBarProps> = ({ additionalTopItems, bottomMenu
   const { formatMessage } = useIntl();
 
   const OSSBottomMenuItems = [
-    <a href={links.updateLink} target="_blank" rel="noreferrer" className={styles.menuItem}>
+    <a href={links.updateLink} target="_blank" rel="noreferrer" className={styles.menuItem} data-testid="updateLink">
       <FontAwesomeIcon className={styles.helpIcon} icon={faRocket} />
       <Text className={styles.text} size="sm">
         <FormattedMessage id="sidebar.update" />
@@ -110,7 +110,7 @@ export const SideBar: React.FC<SideBarProps> = ({ additionalTopItems, bottomMenu
           <AirbyteLogo height={33} width={33} />
         </Link>
         {additionalTopItems}
-        <ul className={styles.menu}>
+        <ul className={styles.menu} data-testid="navMainItems">
           <li>
             <NavLink className={navLinkClassName} to={RoutePaths.Connections}>
               <ConnectionsIcon />
@@ -137,7 +137,7 @@ export const SideBar: React.FC<SideBarProps> = ({ additionalTopItems, bottomMenu
           </li>
         </ul>
       </div>
-      <ul className={styles.menu}>
+      <ul className={styles.menu} data-testid="navBottomMenu">
         {bottomMenuArray.map((item, idx) => {
           // todo: better key
           return <li key={idx}>{item}</li>;
