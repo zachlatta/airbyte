@@ -112,7 +112,7 @@ export const SideBar: React.FC<SideBarProps> = ({ additionalTopItems, bottomMenu
         {additionalTopItems}
         <ul className={styles.menu} data-testid="navMainItems">
           <li>
-            <NavLink className={navLinkClassName} to={RoutePaths.Connections}>
+            <NavLink className={navLinkClassName} to={RoutePaths.Connections} data-testid="connectionsLink">
               <ConnectionsIcon />
               <Text className={styles.text} size="sm">
                 <FormattedMessage id="sidebar.connections" />
@@ -120,7 +120,7 @@ export const SideBar: React.FC<SideBarProps> = ({ additionalTopItems, bottomMenu
             </NavLink>
           </li>
           <li>
-            <NavLink className={navLinkClassName} to={RoutePaths.Source}>
+            <NavLink className={navLinkClassName} to={RoutePaths.Source} data-testid="sourcesLink">
               <SourceIcon />
               <Text className={styles.text} size="sm">
                 <FormattedMessage id="sidebar.sources" />
@@ -128,7 +128,7 @@ export const SideBar: React.FC<SideBarProps> = ({ additionalTopItems, bottomMenu
             </NavLink>
           </li>
           <li>
-            <NavLink className={navLinkClassName} to={RoutePaths.Destination}>
+            <NavLink className={navLinkClassName} to={RoutePaths.Destination} data-testid="destinationsLink">
               <DestinationIcon />
               <Text className={styles.text} size="sm">
                 <FormattedMessage id="sidebar.destinations" />
