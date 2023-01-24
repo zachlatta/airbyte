@@ -1,0 +1,33 @@
+name: PR Merge Scheduler!
+
+on:
+  # Whenever PRs are created/updated, add them to the scheduler if applicable
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+  # On a schedule, check for PRs that are due for merging and merge those that are ready.
+  schedule:
+    # https://crontab.guru/every-hour (while testing, every 5 minutes)
+    - cron: '*/5 * * * *'
+
+jobs:
+  scheduled_pr_merger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: gr2m/merge-schedule-action@v2
+        with:
+          # Merge method to use. Possible values are merge, squash or
+          # rebase. Default is merge.
+          merge_method: squash
+          # Time zone to use. Default is UTC.
+          time_zone: 'America/Los_Angeles'
+          #           # Require all pull request statuses to be successful before
+          #           # merging. Default is `false`.
+          #           require_statuses_success: 'true'
+          # Label to apply to the pull request if the merge fails. Default is
+          # `automerge-fail`.
+          automerge_fail_label: 'merge-schedule-failed'
+        env:
+          GITHUB_TOKEN: ${{ secrets.OCTAVIA_PAT }}
