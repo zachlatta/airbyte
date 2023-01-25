@@ -599,15 +599,12 @@ definitions:
     type: object
     required:
       - type
-      - name
       - path
       - url_base
     properties:
       type:
         type: string
         enum: [HttpRequester]
-      name:
-        type: string
       path:
         type: string
       url_base:
@@ -994,15 +991,10 @@ definitions:
         anyOf:
           - "$ref": "#/definitions/CustomRequester"
           - "$ref": "#/definitions/HttpRequester"
-      name:
-        type: string
-        default: ""
       paginator:
         anyOf:
           - "$ref": "#/definitions/DefaultPaginator"
           - "$ref": "#/definitions/NoPagination"
-      primary_key:
-        "$ref": "#/definitions/PrimaryKey"
       stream_slicer:
         anyOf:
           - "$ref": "#/definitions/CartesianProductStreamSlicer"
