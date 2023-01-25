@@ -90,7 +90,8 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const [isFormSubmitting, setIsFormSubmitting] = useState(false);
   const [logsVisible, setLogsVisible] = useState(false);
 
-  const { setDocumentationUrl, setDocumentationPanelOpen } = useDocumentationPanelContext();
+  const { setDocumentationUrl, setDocumentationPanelOpen, setSelectedConnectorDefinition } =
+    useDocumentationPanelContext();
   const {
     testConnector,
     isTestConnectionInProgress,
@@ -132,11 +133,13 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
 
     setDocumentationUrl(selectedConnectorDefinition?.documentationUrl ?? "");
     setDocumentationPanelOpen(true);
+    setSelectedConnectorDefinition(selectedConnectorDefinition);
   }, [
     selectedConnectorDefinitionSpecification,
     selectedConnectorDefinition,
     setDocumentationPanelOpen,
     setDocumentationUrl,
+    setSelectedConnectorDefinition,
   ]);
 
   const handleTestConnector: ConnectorFormProps["testConnector"] = (v) => {
