@@ -19,9 +19,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
+import io.airbyte.api.client.invoker.generated.ApiException;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
@@ -64,6 +66,9 @@ import io.airbyte.commons.server.scheduler.SynchronousResponse;
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient;
 import io.airbyte.commons.temporal.ErrorCode;
 import io.airbyte.commons.temporal.TemporalClient.ManualOperationResult;
+import io.airbyte.commons.temporal.TemporalJobType;
+import io.airbyte.commons.temporal.TemporalWorkflowUtils;
+import io.airbyte.commons.temporal.scheduling.ConnectionNotificationWorkflow;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.Configs.WorkerEnvironment;
@@ -156,6 +161,7 @@ class SchedulerHandlerTest {
   private ConnectionsHandler connectionsHandler;
   private EnvVariableFeatureFlags envVariableFeatureFlags;
   private WorkflowClient workflowClient;
+  private ConnectionNotificationWorkflow notificationWorkflow;
 
   @BeforeEach
   void setup() {
@@ -180,6 +186,10 @@ class SchedulerHandlerTest {
     connectionsHandler = mock(ConnectionsHandler.class);
     envVariableFeatureFlags = mock(EnvVariableFeatureFlags.class);
     workflowClient = mock(WorkflowClient.class);
+    notificationWorkflow = mock(ConnectionNotificationWorkflow.class);
+
+    when(workflowClient.newWorkflowStub(ConnectionNotificationWorkflow.class, TemporalWorkflowUtils.buildWorkflowOptions(TemporalJobType.NOTIFY)))
+        .thenReturn(notificationWorkflow);
 
     jobConverter = spy(new JobConverter(WorkerEnvironment.DOCKER, LogConfigs.EMPTY));
 
@@ -563,7 +573,8 @@ class SchedulerHandlerTest {
   }
 
   @Test
-  void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreaking() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreaking()
+      throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException, ApiException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID discoveredCatalogId = UUID.randomUUID();
@@ -591,7 +602,8 @@ class SchedulerHandlerTest {
         CatalogHelpers.createAirbyteStream(SHOES, Field.of(SKU, JsonSchemaType.STRING)),
         CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
 
-    final ConnectionRead connectionRead = new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).connectionId(connectionId);
+    final ConnectionRead connectionRead =
+        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).connectionId(connectionId).notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
@@ -610,11 +622,12 @@ class SchedulerHandlerTest {
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
+    verify(notificationWorkflow).sendSchemaChangeNotification(connectionId);
   }
 
   @Test
   void testDiscoverSchemaFromSourceIdWithConnectionIdNonBreakingDisableConnectionPreferenceNoFeatureFlag()
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException, ApiException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID discoveredCatalogId = UUID.randomUUID();
@@ -645,7 +658,7 @@ class SchedulerHandlerTest {
 
     final ConnectionRead connectionRead =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.ACTIVE).connectionId(connectionId);
+            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.ACTIVE).connectionId(connectionId).notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
@@ -665,6 +678,7 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
+    verify(notificationWorkflow).sendSchemaChangeNotification(connectionId);
   }
 
   @Test
@@ -700,7 +714,7 @@ class SchedulerHandlerTest {
 
     final ConnectionRead connectionRead =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.DISABLE).connectionId(connectionId);
+            NonBreakingChangesPreference.DISABLE).connectionId(connectionId).notifySchemaChanges(false);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
@@ -720,10 +734,12 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.INACTIVE);
+    verifyNoInteractions(notificationWorkflow);
   }
 
   @Test
-  void testDiscoverSchemaFromSourceIdWithConnectionIdBreaking() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testDiscoverSchemaFromSourceIdWithConnectionIdBreaking()
+      throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException, ApiException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID discoveredCatalogId = UUID.randomUUID();
@@ -753,7 +769,8 @@ class SchedulerHandlerTest {
         CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
 
     final ConnectionRead connectionRead =
-        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).status(ConnectionStatus.ACTIVE).connectionId(connectionId);
+        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).status(ConnectionStatus.ACTIVE).connectionId(connectionId)
+            .notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
@@ -776,10 +793,12 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.ACTIVE);
     verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
+    verify(notificationWorkflow).sendSchemaChangeNotification(connectionId);
   }
 
   @Test
-  void testDiscoverSchemaFromSourceIdWithConnectionIdBreakingFeatureFlagOn() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testDiscoverSchemaFromSourceIdWithConnectionIdBreakingFeatureFlagOn()
+      throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException, ApiException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID discoveredCatalogId = UUID.randomUUID();
@@ -809,7 +828,8 @@ class SchedulerHandlerTest {
         CatalogHelpers.createAirbyteStream(SHOES, Field.of(SKU, JsonSchemaType.STRING)),
         CatalogHelpers.createAirbyteStream(DOGS, Field.of(NAME, JsonSchemaType.STRING))));
 
-    final ConnectionRead connectionRead = new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).connectionId(connectionId);
+    final ConnectionRead connectionRead =
+        new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).connectionId(connectionId).notifySchemaChanges(true);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
@@ -832,6 +852,7 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.INACTIVE);
     verify(connectionsHandler).updateConnection(expectedConnectionUpdate);
+    verify(notificationWorkflow).sendSchemaChangeNotification(connectionId);
   }
 
   @Test
@@ -865,7 +886,7 @@ class SchedulerHandlerTest {
 
     final ConnectionRead connectionRead =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.INACTIVE).connectionId(connectionId);
+            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.INACTIVE).connectionId(connectionId).notifySchemaChanges(false);
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff);
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
@@ -885,10 +906,13 @@ class SchedulerHandlerTest {
     assertEquals(actual.getCatalogDiff(), catalogDiff);
     assertEquals(actual.getCatalog(), expectedActorCatalog);
     assertEquals(actual.getConnectionStatus(), ConnectionStatus.INACTIVE);
+    // notification preferences are turned on, but there is no schema diff detected
+    verifyNoInteractions(notificationWorkflow);
   }
 
   @Test
-  void testDiscoverSchemaForSourceMultipleConnectionsFeatureFlagOn() throws IOException, JsonValidationException, ConfigNotFoundException {
+  void testDiscoverSchemaForSourceMultipleConnectionsFeatureFlagOn()
+      throws IOException, JsonValidationException, ConfigNotFoundException, InterruptedException, ApiException {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final UUID connectionId = UUID.randomUUID();
     final UUID connectionId2 = UUID.randomUUID();
@@ -932,15 +956,15 @@ class SchedulerHandlerTest {
 
     final ConnectionRead connectionRead =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.IGNORE).status(ConnectionStatus.ACTIVE).connectionId(connectionId);
+            NonBreakingChangesPreference.IGNORE).status(ConnectionStatus.ACTIVE).connectionId(connectionId).notifySchemaChanges(true);
 
     final ConnectionRead connectionRead2 =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.IGNORE).status(ConnectionStatus.ACTIVE).connectionId(connectionId2);
+            NonBreakingChangesPreference.IGNORE).status(ConnectionStatus.ACTIVE).connectionId(connectionId2).notifySchemaChanges(true);
 
     final ConnectionRead connectionRead3 =
         new ConnectionRead().syncCatalog(CatalogConverter.toApi(airbyteCatalogCurrent)).nonBreakingChangesPreference(
-            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.ACTIVE).connectionId(connectionId3);
+            NonBreakingChangesPreference.DISABLE).status(ConnectionStatus.ACTIVE).connectionId(connectionId3).notifySchemaChanges(false);
 
     when(connectionsHandler.getConnection(request.getConnectionId())).thenReturn(connectionRead, connectionRead2, connectionRead3);
     when(connectionsHandler.getDiff(any(), any(), any())).thenReturn(catalogDiff1, catalogDiff2, catalogDiff3);
@@ -968,6 +992,9 @@ class SchedulerHandlerTest {
     assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(0).getStatus());
     assertEquals(ConnectionStatus.ACTIVE, connectionUpdateValues.get(1).getStatus());
     assertEquals(ConnectionStatus.INACTIVE, connectionUpdateValues.get(2).getStatus());
+    verify(notificationWorkflow).sendSchemaChangeNotification(connectionId);
+    verify(notificationWorkflow).sendSchemaChangeNotification(connectionId2);
+    verify(notificationWorkflow, times(0)).sendSchemaChangeNotification(connectionId3);
   }
 
   @Test
