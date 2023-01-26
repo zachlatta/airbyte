@@ -45,8 +45,8 @@ definitions:
 streams:
   - type: DeclarativeStream
     $parameters:
-      name: "payments"
       stream_cursor_field: "created_at"
+    name: "payments"
     primary_key: "id"
     schema_loader:
       $ref: "#/definitions/schema_loader"
@@ -57,8 +57,8 @@ streams:
         path: "/payments"
   - type: DeclarativeStream
     $parameters:
-      name: "refunds"
       stream_cursor_field: "created_at"
+    name: "refunds"
     primary_key: "id"
     schema_loader:
       $ref: "#/definitions/schema_loader"
@@ -69,8 +69,8 @@ streams:
         path: "/refunds"
   - type: DeclarativeStream
     $parameters:
-      name: "mandates"
       stream_cursor_field: "created_at"
+    name: "mandates"
     primary_key: "id"
     schema_loader:
       $ref: "#/definitions/schema_loader"
@@ -81,8 +81,8 @@ streams:
         path: "/mandates"
   - type: DeclarativeStream
     $parameters:
-      name: "payouts"
       stream_cursor_field: "created_at"
+    name: "payouts"
     primary_key: "id"
     schema_loader:
       $ref: "#/definitions/schema_loader"
